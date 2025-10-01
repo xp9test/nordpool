@@ -1,5 +1,5 @@
 blueprint:
-  name: Nordpool price based on 15min
+  name: Nordpool price based on 15min with time range
   description: |
     Käyttää Nordpool-integraatiota ja kytkee laitteita päälle/p pois
     halvimpiin 15 minuutin jaksoihin perustuen.
