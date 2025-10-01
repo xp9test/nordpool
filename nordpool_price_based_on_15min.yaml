@@ -24,16 +24,7 @@ blueprint:
           max: 24.0
           mode: slider
           step: 1.0
-    quarter_ratio:
-      name: Quarter percent
-      description: Maksimiprosentti päivän hinta-alueesta, jonka sisällä laite saa olla päällä
-      default: 50
-      selector:
-        number:
-          min: 0.0
-          max: 100.0
-          mode: slider
-          step: 5.0
+
     allways_on:
       name: Always on price
       description: Jos hinta alle tämän, laite on aina päällä
@@ -69,7 +60,6 @@ blueprint:
 variables:
   grid_area_var: !input grid_area
   hour_rank_var: !input hour_rank
-  quarter_ratio_var: !input quarter_ratio
   allways_on_var: !input allways_on
   allways_off_var: !input allways_off
 trigger:
@@ -95,7 +85,6 @@ action:
 
                   {% set seton = (
                        price | float <= allways_on_var | float
-                       or ratio | int <= quarter_ratio_var | int
                        or rank | int <= allowed_quarters | int
                   ) %}
                   {{ price | float < allways_off_var | float and seton }}
