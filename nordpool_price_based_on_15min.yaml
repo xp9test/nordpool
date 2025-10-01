@@ -1,0 +1,107 @@
+blueprint:
+  name: Nordpool price based on 15min
+  description: |
+    Käyttää Nordpool-integraatiota ja kytkee laitteita päälle/p pois
+    halvimpiin 15 minuutin jaksoihin perustuen.
+  domain: automation
+  input:
+    grid_area:
+      name: Grid area sensor
+      description: Tämä on Nordpoolin grid area -sensori
+      selector:
+        entity:
+          domain:
+          - sensor
+          integration: nordpool
+          multiple: false
+    quarter_rank:
+      name: 15min periods on
+      description: Montako 15 min jaksoa (0–96) päivässä laite saa olla päällä
+      default: 20
+      selector:
+        number:
+          min: 0.0
+          max: 96.0
+          mode: slider
+          step: 1.0
+    quarter_ratio:
+      name: Quarter percent
+      description: Maksimiprosentti päivän hinta-alueesta, jonka sisällä laite saa olla päällä
+      default: 50
+      selector:
+        number:
+          min: 0.0
+          max: 100.0
+          mode: slider
+          step: 5.0
+    allways_on:
+      name: Always on price
+      description: Jos hinta alle tämän, laite on aina päällä
+      default: 0.0
+      selector:
+        number:
+          min: 0.0
+          max: 20.0
+          mode: slider
+          step: 0.1
+    allways_off:
+      name: Always off price
+      description: Jos hinta yli tämän, laite on aina pois päältä
+      default: 20
+      selector:
+        number:
+          min: 0.0
+          max: 20.0
+          mode: slider
+          step: 0.1
+    turnon:
+      name: TurnOn
+      description: Toiminnot, jotka suoritetaan kun laite kytketään päälle
+      default: []
+      selector:
+        action: {}
+    turnoff:
+      name: TurnOff
+      description: Toiminnot, jotka suoritetaan kun laite kytketään pois päältä
+      default: []
+      selector:
+        action: {}
+variables:
+  grid_area_var: !input grid_area
+  quarter_rank_var: !input quarter_rank
+  quarter_ratio_var: !input quarter_ratio
+  allways_on_var: !input allways_on
+  allways_off_var: !input allways_off
+trigger:
+  - platform: time_pattern
+    minutes: "/15"   # tarkistus jokaisella vartilla
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {% set prices = state_attr(grid_area_var, 'today') | list %}
+              {% if prices != none and prices | count > 0 %}
+                {% set h = now().hour %}
+                {% set m = now().minute %}
+                {% set idx = h * 4 + (m // 15) %}
+                {% if idx < prices | count %}
+                  {% set price = prices[idx] %}
+                  {% set sorted_prices = prices | sort %}
+                  {% set diff = sorted_prices[-1] - sorted_prices[0] %}
+                  {% set ratio = ((price - sorted_prices[0]) / diff) * 100 | round if diff > 0 else 0 %}
+                  {% set rank = sorted_prices.index(price) + 1 %}
+                  {% set seton = (
+                       price | float <= allways_on_var | float
+                       or ratio | int <= quarter_ratio_var | int
+                       or rank | int <= quarter_rank_var | int
+                  ) %}
+                  {{ price | float < allways_off_var | float and seton }}
+                {% else %}
+                  false
+                {% endif %}
+              {% else %}
+                false
+              {% endif %}
+        sequence: !input turnon
+    default: !input turnoff
