@@ -1,0 +1,127 @@
+blueprint:
+  name: Nordpool price based on 15min
+  description: |
+    Käyttää Nordpool-integraatiota ja kytkee laitteita päälle/p pois
+    halvimpiin 15 minuutin jaksoihin perustuen.
+  domain: automation
+  input:
+    grid_area:
+      name: Grid area sensor
+      description: Tämä on Nordpoolin grid area -sensori
+      selector:
+        entity:
+          domain:
+          - sensor
+          integration: nordpool
+          multiple: false
+    hour_rank:
+      name: Hours on
+      description: Montako tuntia (0–24) päivässä laite saa olla päällä
+      default: 5
+      selector:
+        number:
+          min: 0.0
+          max: 24.0
+          mode: slider
+          step: 1.0
+    min_hour:
+      name: Earliest start hour
+      description: Ensimmäinen kellonaika jolloin saa käynnistyä (0–23)
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 23
+          step: 1
+    max_hour:
+      name: Latest end hour
+      description: Viimeinen kellonaika jolloin saa olla päällä (0–23)
+      default: 23
+      selector:
+        number:
+          min: 0
+          max: 23
+          step: 1
+    allways_on:
+      name: Always on price
+      description: Jos hinta alle tämän, laite on aina päällä
+      default: 0.0
+      selector:
+        number:
+          min: 0.0
+          max: 20.0
+          mode: slider
+          step: 0.1
+    allways_off:
+      name: Always off price
+      description: Jos hinta yli tämän, laite on aina pois päältä
+      default: 20
+      selector:
+        number:
+          min: 0.0
+          max: 60.0
+          mode: slider
+          step: 0.1
+    turnon:
+      name: TurnOn
+      description: Toiminnot, jotka suoritetaan kun laite kytketään päälle
+      default: []
+      selector:
+        action: {}
+    turnoff:
+      name: TurnOff
+      description: Toiminnot, jotka suoritetaan kun laite kytketään pois päältä
+      default: []
+      selector:
+        action: {}
+variables:
+  grid_area_var: !input grid_area
+  hour_rank_var: !input hour_rank
+  min_hour_var: !input min_hour
+  max_hour_var: !input max_hour
+  allways_on_var: !input allways_on
+  allways_off_var: !input allways_off
+trigger:
+  - platform: time_pattern
+    minutes: "/15"   # tarkistus jokaisella vartilla
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {% set prices = state_attr(grid_area_var, 'today') | list %}
+              {% if prices %}
+                {% set h = now().hour %}
+                {% set m = now().minute %}
+                {% set idx = h * 4 + (m // 15) %}
+                
+                {# suodatetaan kvartit min/max hour #}
+                {% set filtered_prices = [] %}
+                {% for i, p in prices | enumerate %}
+                  {% set hour = i // 4 %}
+                  {% if hour >= min_hour_var and hour < max_hour_var %}
+                    {% set _ = filtered_prices.append({'idx': i, 'price': p}) %}
+                  {% endif %}
+                {% endfor %}
+
+                {# valitaan halvin n kvarttia #}
+                {% set allowed_quarters = hour_rank_var * 4 %}
+                {% set sorted_filtered = filtered_prices | sort(attribute='price') %}
+                {% set cheapest_quarters = sorted_filtered[:allowed_quarters] | map(attribute='idx') | list %}
+
+                {# tarkistetaan nykyinen kvartti #}
+                {% if idx in cheapest_quarters or prices[idx] <= allways_on_var %}
+                  {% if prices[idx] < allways_off_var %}
+                    true
+                  {% else %}
+                    false
+                  {% endif %}
+                {% else %}
+                  false
+                {% endif %}
+              {% else %}
+                false
+              {% endif %}
+            
+        sequence: !input turnon
+    default: !input turnoff
