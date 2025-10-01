@@ -14,14 +14,14 @@ blueprint:
           - sensor
           integration: nordpool
           multiple: false
-    quarter_rank:
-      name: 15min periods on
-      description: Montako 15 min jaksoa (0–96) päivässä laite saa olla päällä
-      default: 20
+    hour_rank:
+      name: Hours on
+      description: Montako tuntia (0–24) päivässä laite saa olla päällä
+      default: 5
       selector:
         number:
           min: 0.0
-          max: 96.0
+          max: 24.0
           mode: slider
           step: 1.0
     quarter_ratio:
@@ -68,7 +68,7 @@ blueprint:
         action: {}
 variables:
   grid_area_var: !input grid_area
-  quarter_rank_var: !input quarter_rank
+  hour_rank_var: !input hour_rank
   quarter_ratio_var: !input quarter_ratio
   allways_on_var: !input allways_on
   allways_off_var: !input allways_off
@@ -91,10 +91,12 @@ action:
                   {% set diff = sorted_prices[-1] - sorted_prices[0] %}
                   {% set ratio = ((price - sorted_prices[0]) / diff) * 100 | round if diff > 0 else 0 %}
                   {% set rank = sorted_prices.index(price) + 1 %}
+                  {% set allowed_quarters = hour_rank_var | int * 4 %}
+
                   {% set seton = (
                        price | float <= allways_on_var | float
                        or ratio | int <= quarter_ratio_var | int
-                       or rank | int <= quarter_rank_var | int
+                       or rank | int <= allowed_quarters | int
                   ) %}
                   {{ price | float < allways_off_var | float and seton }}
                 {% else %}
