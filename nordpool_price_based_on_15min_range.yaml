@@ -1,7 +1,7 @@
 blueprint:
   name: Nordpool price based on 15min with time range
   description: |
-    Käyttää Nordpool-integraatiota ja kytkee laitteita päälle/p pois
+    Käyttää Nordpool-integraatiota ja kytkee laitteita päälle pois
     halvimpiin 15 minuutin jaksoihin perustuen.
   domain: automation
   input:
@@ -116,5 +116,15 @@ action:
                 false
               {% endif %}
             
-        sequence: !input turnon
+        sequence:
+        - service: persistent_notification.create
+          data:
+            title: "Nordpool Debug"
+            message: >
+              idx={{ idx }}
+              hinta={{ prices[idx] }}
+              allways_on={{ allways_on_var }}
+              allways_off={{ allways_off_var }}
+              halvimmat={{ cheapest_quarters }}
+        - service: !input turnon
     default: !input turnoff
