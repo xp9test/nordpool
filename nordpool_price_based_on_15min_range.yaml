@@ -111,7 +111,7 @@ action:
 
                 {% set price_now = prices[idx] | float %}
 
-                {{ (idx in cheapest or price_now <= allways_on_var | float) and (price_now < allways_off_var | float) }}
+                {{ (idx in cheapest or price_now <= (allways_on_var | float)) and (price_now < (allways_off_var | float)) }}
               {% else %}
                 false
               {% endif %}
