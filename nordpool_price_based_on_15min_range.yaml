@@ -116,34 +116,5 @@ action:
                 false
               {% endif %}
             
-        sequence:
-          - service: persistent_notification.create
-            data:
-              title: "Nordpool Debug"
-              message: >
-                {% set prices = state_attr(grid_area_var, 'today') | list %}
-                {% if prices %}
-                  {% set h = now().hour %}
-                  {% set m = now().minute %}
-                  {% set idx = h*4 + (m//15) %}
-                  {% set filtered_prices = [] %}
-                  {% for i, p in prices | enumerate %}
-                    {% set hour = i // 4 %}
-                    {% if hour >= min_hour_var and hour < max_hour_var %}
-                      {% set _ = filtered_prices.append({'idx': i, 'price': p}) %}
-                    {% endif %}
-                  {% endfor %}
-                  {% set allowed_quarters = hour_rank_var * 4 %}
-                  {% set sorted_filtered = filtered_prices | sort(attribute='price') %}
-                  {% set cheapest_quarters = sorted_filtered[:allowed_quarters] | map(attribute='idx') | list %}
-
-                  Nykyinen kvartti: {{ idx }}  
-                  Hinta nyt: {{ prices[idx] }}  
-                  Halvimmat kvartit: {{ cheapest_quarters }}  
-                  Always on raja: {{ allways_on_var }}  
-                  Always off raja: {{ allways_off_var }}
-                {% else %}
-                  Nordpool-hintoja ei saatavilla
-                {% endif %}
-          - !input turnon
+        sequence: !input turnon
     default: !input turnoff
