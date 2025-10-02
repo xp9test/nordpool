@@ -1,0 +1,104 @@
+type: masonry
+path: nordpoolcheap
+title: Nordpool 15min
+cards:
+  - type: custom:apexcharts-card
+    graph_span: 24h
+    header:
+      title: Energy price today (snt/kWh)
+      show: true
+    span:
+      start: day
+    now:
+      show: true
+      label: Now
+    experimental:
+      color_threshold: true
+    apex_config:
+      markers:
+        size: 4
+        strokeWidth: 2
+      legend:
+        show: false
+    series:
+      - entity: sensor.nordpool_kwh_fi_eur_3_10_0255
+        type: column
+        data_generator: >
+          return entity.attributes.raw_today.map(item => [new
+          Date(item.start).getTime(), item.value]);
+        color_threshold:
+          - value: -10
+            color: "#4CAF50"
+          - value: 2
+            color: "#66BB6A"
+          - value: 4
+            color: "#8BC34A"
+          - value: 6
+            color: "#CDDC39"
+          - value: 8
+            color: "#FFEB3B"
+          - value: 10
+            color: "#FFC107"
+          - value: 12
+            color: "#FF9800"
+          - value: 14
+            color: "#FF7043"
+          - value: 16
+            color: "#F4511E"
+          - value: 18
+            color: "#F44336"
+          - value: 20
+            color: "#B71C1C"
+      - entity: sensor.nordpool_kwh_fi_eur_3_10_0255
+        type: line
+        stroke_width: 0
+        color: red
+        data_generator: >
+          const cheapestHours = 40;
+
+          const data = entity.attributes.raw_today.map(item => [new
+          Date(item.start).getTime(), item.value]);
+
+          // järjestetään hinnan mukaan ja otetaan halvimmat tunnit
+
+          const sorted = [...data].sort((a,b) => a[1] - b[1]).slice(0,
+          cheapestHours);
+
+          return sorted;
+  - type: custom:apexcharts-card
+    graph_span: 1d
+    header:
+      title: Energy price tomorrow (snt/kWh)
+      show: true
+    span:
+      start: day
+      offset: +1d
+    apex_config:
+      markers:
+        size: 4
+        strokeWidth: 2
+      legend:
+        show: false
+    series:
+      - entity: sensor.nordpool_kwh_fi_eur_3_10_0255
+        type: column
+        data_generator: |
+          return entity.attributes.raw_tomorrow.map((start, index) => {
+            return [new Date(start["start"]).getTime(), entity.attributes.raw_tomorrow[index]["value"]];
+          });
+      - entity: sensor.nordpool_kwh_fi_eur_3_10_0255
+        type: line
+        stroke_width: 0
+        color: red
+        data_generator: >
+          const cheapestHours = 40;
+
+          const data = entity.attributes.raw_tomorrow.map(item => [new
+          Date(item.start).getTime(), item.value]);
+
+          // järjestetään hinnan mukaan ja otetaan halvimmat tunnit
+
+          const sorted = [...data].sort((a,b) => a[1] - b[1]).slice(0,
+          cheapestHours);
+
+          return sorted;
