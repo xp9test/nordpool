@@ -89,36 +89,29 @@ action:
       - conditions:
           - condition: template
             value_template: >
-              {% set prices = state_attr(grid_area_var, 'today') | list %}
+              {% set prices = state_attr(grid_area_var, 'today') %}
               {% if prices %}
                 {% set h = now().hour %}
                 {% set m = now().minute %}
                 {% set idx = h * 4 + (m // 15) %}
-                
-                {# suodatetaan kvartit min/max hour #}
-                {% set filtered_prices = [] %}
-                {% for i, p in prices | enumerate %}
+
+                {# Suodatetaan kvartit aikahaarukkaan #}
+                {% set filtered = [] %}
+                {% for i in range(prices | count) %}
+                  {% set p = prices[i] | float %}
                   {% set hour = i // 4 %}
                   {% if hour >= min_hour_var and hour < max_hour_var %}
-                    {% set _ = filtered_prices.append({'idx': i, 'price': p}) %}
+                    {% set _ = filtered.append({'idx': i, 'price': p}) %}
                   {% endif %}
                 {% endfor %}
 
-                {# valitaan halvin n kvarttia #}
                 {% set allowed_quarters = hour_rank_var * 4 %}
-                {% set sorted_filtered = filtered_prices | sort(attribute='price') %}
-                {% set cheapest_quarters = sorted_filtered[:allowed_quarters] | map(attribute='idx') | list %}
+                {% set sorted_filtered = filtered | sort(attribute='price') %}
+                {% set cheapest = sorted_filtered[:allowed_quarters] | map(attribute='idx') | list %}
 
-                {# tarkistetaan nykyinen kvartti #}
-                {% if idx in cheapest_quarters or prices[idx] <= allways_on_var %}
-                  {% if prices[idx] < allways_off_var %}
-                    true
-                  {% else %}
-                    false
-                  {% endif %}
-                {% else %}
-                  false
-                {% endif %}
+                {% set price_now = prices[idx] | float %}
+
+                {{ (idx in cheapest or price_now <= allways_on_var | float) and (price_now < allways_off_var | float) }}
               {% else %}
                 false
               {% endif %}
