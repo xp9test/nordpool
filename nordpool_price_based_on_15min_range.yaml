@@ -24,24 +24,27 @@ blueprint:
           max: 24.0
           mode: slider
           step: 1.0
-    min_hour:
-      name: Earliest start hour
-      description: Ensimmäinen kellonaika jolloin saa käynnistyä (0–23)
+    start_hour:
+      name: Start hour
+      description: Mistä tunnista alkaen halvimpia tunteja etsitään (0–23)
       default: 0
       selector:
         number:
           min: 0
           max: 23
+          mode: slider
           step: 1
-    max_hour:
-      name: Latest end hour
-      description: Viimeinen kellonaika jolloin saa olla päällä (0–23)
-      default: 23
+    end_hour:
+      name: End hour
+      description: Mihin tuntiin asti halvimpia tunteja etsitään (1–24)
+      default: 15
       selector:
         number:
-          min: 0
-          max: 23
+          min: 1
+          max: 24
+          mode: slider
           step: 1
+
     allways_on:
       name: Always on price
       description: Jos hinta alle tämän, laite on aina päällä
@@ -77,10 +80,10 @@ blueprint:
 variables:
   grid_area_var: !input grid_area
   hour_rank_var: !input hour_rank
-  min_hour_var: !input min_hour
-  max_hour_var: !input max_hour
   allways_on_var: !input allways_on
   allways_off_var: !input allways_off
+  start_hour_var: !input start_hour
+  end_hour_var: !input end_hour
 trigger:
   - platform: time_pattern
     minutes: "/15"   # tarkistus jokaisella vartilla
@@ -89,32 +92,31 @@ action:
       - conditions:
           - condition: template
             value_template: >
-              {% set prices = state_attr(grid_area_var, 'today') %}
-              {% if prices %}
+              {% set prices = state_attr(grid_area_var, 'today') | list %}
+              {% if prices != none and prices | count > 0 %}
                 {% set h = now().hour %}
                 {% set m = now().minute %}
                 {% set idx = h * 4 + (m // 15) %}
-
-                {# Suodatetaan kvartit aikahaarukkaan #}
-                {% set filtered = [] %}
-                {% for i in range(prices | count) %}
-                  {% set p = prices[i] | float %}
-                  {% set hour = i // 4 %}
-                  {% if hour >= min_hour_var and hour < max_hour_var %}
-                    {% set _ = filtered.append({'idx': i, 'price': p}) %}
-                  {% endif %}
-                {% endfor %}
-
-                {% set allowed_quarters = hour_rank_var * 4 %}
-                {% set sorted_filtered = filtered | sort(attribute='price') %}
-                {% set cheapest = sorted_filtered[:allowed_quarters] | map(attribute='idx') | list %}
-
-                {% set price_now = prices[idx] | float %}
-
-                {{ (idx in cheapest or price_now <= (allways_on_var | float)) and (price_now < (allways_off_var | float)) }}
+                {% set start_idx = start_hour_var | int * 4 %}
+                {% set end_idx = end_hour_var | int * 4 %}
+                {% set window_prices = prices[start_idx:end_idx] %}
+                {% if idx < prices | count %}
+                  {% set price = prices[idx] %}
+                  {% set sorted_window = window_prices | sort %}
+                  {% set diff = sorted_window[-1] - sorted_window[0] %}
+                  {% set rank = sorted_window.index(price) + 1 if price in sorted_window else 999 %}
+                  {% set allowed_quarters = hour_rank_var | int * 4 %}
+                  {% set seton = (
+                      price | float <= allways_on_var | float
+                      or rank | int <= allowed_quarters | int
+                  ) %}
+                  {{ price | float < allways_off_var | float and seton }}
+                {% else %}
+                  false
+                {% endif %}
               {% else %}
                 false
               {% endif %}
-            
+           
         sequence: !input turnon
     default: !input turnoff
