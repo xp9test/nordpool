@@ -97,26 +97,32 @@ action:
                 {% set h = now().hour %}
                 {% set m = now().minute %}
                 {% set idx = h * 4 + (m // 15) %}
+                {% set current_hour = h %}
                 {% set start_idx = start_hour_var | int * 4 %}
                 {% set end_idx = end_hour_var | int * 4 %}
                 {% set window_prices = prices[start_idx:end_idx] %}
                 {% if idx < prices | count %}
-                  {% set price = prices[idx] %}
-                  {% set sorted_window = window_prices | sort %}
-                  {% set diff = sorted_window[-1] - sorted_window[0] %}
-                  {% set rank = sorted_window.index(price) + 1 if price in sorted_window else 999 %}
-                  {% set allowed_quarters = hour_rank_var | int * 4 %}
-                  {% set seton = (
-                      price | float <= allways_on_var | float
-                      or rank | int <= allowed_quarters | int
-                  ) %}
-                  {{ price | float < allways_off_var | float and seton }}
+                  {% if current_hour >= start_hour_var | int and current_hour < end_hour_var | int %}
+                    {% set price = prices[idx] %}
+                    {% set sorted_window = window_prices | sort %}
+                    {% set diff = sorted_window[-1] - sorted_window[0] %}
+                    {% set rank = sorted_window.index(price) + 1 if price in sorted_window else 999 %}
+                    {% set allowed_quarters = hour_rank_var | int * 4 %}
+                    {% set seton = (
+                        price | float <= allways_on_var | float
+                        or rank | int <= allowed_quarters | int
+                    ) %}
+                    {{ price | float < allways_off_var | float and seton }}
+                  {% else %}
+                    false
+                  {% endif %}
                 {% else %}
                   false
                 {% endif %}
               {% else %}
                 false
               {% endif %}
+
            
         sequence: !input turnon
     default: !input turnoff
