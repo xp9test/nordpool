@@ -43,3 +43,7 @@ YAML blueprints imported via Home Assistant UI or file system
 <img width="1051" height="838" alt="image" src="https://github.com/user-attachments/assets/c1d7728f-0710-497c-9e7e-abcd68436c3e" />
 
 <img width="512" height="744" alt="image" src="https://github.com/user-attachments/assets/d8ee5b63-30eb-4e95-bdfa-b5e7d6bd0192" />
+
+
+[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?business=BE7ALR22TYABJ&no_recurring=1&item_name=Help+me+to+get+my+coffee&currency_code=EUR)
+
